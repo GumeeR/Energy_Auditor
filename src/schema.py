@@ -1,8 +1,11 @@
-from pydantic import BaseModel, Field
-from typing import List, Optional, Union
 from enum import Enum
+from typing import List, Optional, Union
+from pydantic import BaseModel, Field, field_validator
+from src.security import (
+    MAX_BUSINESS_PROMPT_LEN, MAX_DATASET_REF_LEN, MAX_FACILITY_LEN,
+    MAX_PERIOD_LEN, sanitize_prompt, validar_ref_simple,
+)
 
-# Valores fijos
 class StatusEnum(str, Enum):
     success = "success"
     warning = "warning"
@@ -13,21 +16,38 @@ class ConfidenceEnum(str, Enum):
     medium = "medium"
     low = "low"
 
-# Entrada
 class JobRequest(BaseModel):
-    dataset_ref: str = Field(..., description="nombre del csv dentro de data/datasets/")
-    period: Optional[str] = None
-    facility_filter: Optional[str] = None
-    business_prompt: Optional[str] = "Generate structured findings and preliminary recommendations"
+    dataset_ref: str = Field(..., max_length=MAX_DATASET_REF_LEN,
+                             description="Nombre del CSV dentro de data/dataset/")
+    period: Optional[str] = Field(None, max_length=MAX_PERIOD_LEN)
+    facility_filter: Optional[str] = Field(None, max_length=MAX_FACILITY_LEN)
+    business_prompt: Optional[str] = Field(
+        "Generate structured findings and preliminary recommendations",
+        max_length=MAX_BUSINESS_PROMPT_LEN,
+    )
 
-# Salida
+    @field_validator("period")
+    @classmethod
+    def _v_period(cls, v):
+        return validar_ref_simple(v, MAX_PERIOD_LEN, "period")
+
+    @field_validator("facility_filter")
+    @classmethod
+    def _v_facility(cls, v):
+        return validar_ref_simple(v, MAX_FACILITY_LEN, "facility_filter")
+
+    @field_validator("business_prompt")
+    @classmethod
+    def _v_prompt(cls, v):
+        return sanitize_prompt(v, MAX_BUSINESS_PROMPT_LEN)
+
 class Summary(BaseModel):
     period: str
     dataset_ref: str
 
 class Metric(BaseModel):
     name: str
-    value: Union[float, str]
+    value: Union[float, int, str]
     unit: str
     source: str = "deterministic"
 
@@ -48,7 +68,7 @@ class Recommendation(BaseModel):
     based_on_findings: List[str]
     disclaimer: str = "Draft subject to human review"
 
-class Warning_(BaseModel):
+class WarningItem(BaseModel):
     code: str
     message: str
 
@@ -64,5 +84,5 @@ class JobResult(BaseModel):
     metrics: List[Metric]
     findings: List[Finding]
     recommendations_draft: List[Recommendation]
-    warnings: List[Warning_]
+    warnings: List[WarningItem]
     trace: Trace

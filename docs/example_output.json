@@ -1,0 +1,131 @@
+{
+  "job_id": "b3f1c2a0-1234-5678-9abc-def012345678",
+  "status": "warning",
+  "summary": {
+    "period": "2025-03",
+    "dataset_ref": "dataset_consumo_energetico.csv"
+  },
+  "metrics": [
+    {
+      "name": "total_energy_kwh",
+      "value": 94730.0,
+      "unit": "kWh",
+      "source": "deterministic"
+    },
+    {
+      "name": "total_production_units",
+      "value": 20780.0,
+      "unit": "unit",
+      "source": "deterministic"
+    },
+    {
+      "name": "total_estimated_emissions_kg",
+      "value": 17840.15,
+      "unit": "kgCO2e",
+      "source": "deterministic"
+    },
+    {
+      "name": "avg_kwh_per_unit",
+      "value": 4.4946,
+      "unit": "kWh/unit",
+      "source": "deterministic"
+    },
+    {
+      "name": "avg_variance_vs_target_pct",
+      "value": 11.72,
+      "unit": "%",
+      "source": "deterministic"
+    },
+    {
+      "name": "records_count",
+      "value": 4,
+      "unit": "count",
+      "source": "deterministic"
+    }
+  ],
+  "findings": [
+    {
+      "id": "F-001",
+      "type": "sobreconsumo_media",
+      "statement": "Se observa un sobreconsumo energetico en el equipo respecto al target definido. Se recomienda verificacion humana y contrastar con condiciones operativas del periodo.",
+      "evidence": {
+        "dataset_fields": ["energy_kwh", "production_units", "target_kwh_per_unit", "facility_id", "equipment_id", "period"],
+        "document_refs": ["contexto_criterios_hallazgos#p1"]
+      },
+      "confidence": "medium"
+    },
+    {
+      "id": "F-002",
+      "type": "sobreconsumo_media",
+      "statement": "Se observa un sobreconsumo energetico en el equipo respecto al target definido. Se recomienda verificacion humana y contrastar con condiciones operativas del periodo.",
+      "evidence": {
+        "dataset_fields": ["energy_kwh", "production_units", "target_kwh_per_unit", "facility_id", "equipment_id", "period"],
+        "document_refs": ["contexto_criterios_hallazgos#p1"]
+      },
+      "confidence": "medium"
+    },
+    {
+      "id": "F-003",
+      "type": "sobreconsumo_alta",
+      "statement": "Se observa un sobreconsumo energetico en el equipo respecto al target definido. Se recomienda verificacion humana y contrastar con condiciones operativas del periodo.",
+      "evidence": {
+        "dataset_fields": ["energy_kwh", "production_units", "target_kwh_per_unit", "facility_id", "equipment_id", "period"],
+        "document_refs": ["contexto_criterios_hallazgos#p1"]
+      },
+      "confidence": "high"
+    },
+    {
+      "id": "F-004",
+      "type": "sobreconsumo_baja",
+      "statement": "Se observa un sobreconsumo energetico en el equipo respecto al target definido. Se recomienda verificacion humana y contrastar con condiciones operativas del periodo.",
+      "evidence": {
+        "dataset_fields": ["energy_kwh", "production_units", "target_kwh_per_unit", "facility_id", "equipment_id", "period"],
+        "document_refs": ["contexto_criterios_hallazgos#p1"]
+      },
+      "confidence": "low"
+    }
+  ],
+  "recommendations_draft": [
+    {
+      "id": "R-001",
+      "text": "Se sugiere verificar la calibracion y rutina de mantenimiento preventivo del equipo, asi como contrastar la produccion efectiva vs el consumo registrado en el periodo.",
+      "based_on_findings": ["F-001"],
+      "disclaimer": "Draft subject to human review"
+    },
+    {
+      "id": "R-002",
+      "text": "Se sugiere verificar la calibracion y rutina de mantenimiento preventivo del equipo, asi como contrastar la produccion efectiva vs el consumo registrado en el periodo.",
+      "based_on_findings": ["F-002"],
+      "disclaimer": "Draft subject to human review"
+    },
+    {
+      "id": "R-003",
+      "text": "Se sugiere verificar la calibracion y rutina de mantenimiento preventivo del equipo, asi como contrastar la produccion efectiva vs el consumo registrado en el periodo.",
+      "based_on_findings": ["F-003"],
+      "disclaimer": "Draft subject to human review"
+    },
+    {
+      "id": "R-004",
+      "text": "Se sugiere verificar la calibracion y rutina de mantenimiento preventivo del equipo, asi como contrastar la produccion efectiva vs el consumo registrado en el periodo.",
+      "based_on_findings": ["F-004"],
+      "disclaimer": "Draft subject to human review"
+    }
+  ],
+  "warnings": [],
+  "trace": {
+    "prompt_version": "v1.0",
+    "documents_used": [
+      "dataset_consumo_energetico.csv",
+      "contexto_criterios_hallazgos.md",
+      "contexto_recomendaciones.md",
+      "contexto_salida_estructurada.md"
+    ],
+    "rules_applied": [
+      "kwh_per_unit = energy_kwh / production_units",
+      "variance_vs_target_pct = ((kwh_per_unit - target) / target) * 100",
+      "estimated_emissions_kg = energy_kwh * co2_factor_kg_per_kwh",
+      "severidad: baja 0-5%, media 5-12%, alta >12%",
+      "LLM solo redacta, no calcula"
+    ]
+  }
+}

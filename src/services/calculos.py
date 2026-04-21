@@ -1,5 +1,5 @@
 import csv
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
 
 CAMPOS_NUMERICOS = [
     "energy_kwh",
@@ -10,19 +10,19 @@ CAMPOS_NUMERICOS = [
     "baseline_energy_kwh",
 ]
 
-def parse_float(valor: str) -> Optional[float]:
+def parse_float(valor: Optional[str]) -> Optional[float]:
     if valor is None:
         return None
-    valor = valor.strip()
-    if valor == "":
+    s = str(valor).strip()
+    if s == "":
         return None
     try:
-        return float(valor)
+        return float(s)
     except ValueError:
         return None
 
 def cargar_dataset(path: str) -> List[Dict[str, Any]]:
-    filas = []
+    filas: List[Dict[str, Any]] = []
     with open(path, "r", encoding="utf-8", newline="") as f:
         reader = csv.DictReader(f)
         for row in reader:
@@ -32,7 +32,11 @@ def cargar_dataset(path: str) -> List[Dict[str, Any]]:
             filas.append(row)
     return filas
 
-def filtrar_datos(filas: List[Dict], period: str = None, facility: str = None) -> List[Dict]:
+def filtrar_datos(
+    filas: List[Dict],
+    period: Optional[str] = None,
+    facility: Optional[str] = None,
+) -> List[Dict]:
     resultado = filas[:]
     if period is not None:
         resultado = [r for r in resultado if r.get("period") == period]
@@ -43,10 +47,7 @@ def filtrar_datos(filas: List[Dict], period: str = None, facility: str = None) -
 def calcular_kwh_por_unidad(row: Dict) -> Optional[float]:
     energy = row.get("energy_kwh")
     prod = row.get("production_units")
-    
-    if energy is None or prod is None:
-        return None
-    if prod == 0:
+    if energy is None or prod is None or prod == 0:
         return None
     return energy / prod
 
@@ -64,7 +65,6 @@ def procesar_fila(row: Dict) -> Dict[str, Any]:
     kwh_unit = calcular_kwh_por_unidad(row)
     variance = calcular_variance(kwh_unit, row.get("target_kwh_per_unit"))
     emisiones = calcular_emisiones(row.get("energy_kwh"), row.get("co2_factor_kg_per_kwh"))
-
     return {
         "facility_id": row["facility_id"],
         "process_name": row["process_name"],
@@ -79,25 +79,21 @@ def procesar_fila(row: Dict) -> Dict[str, Any]:
     }
 
 def clasificar_severidad(variance_pct: Optional[float]) -> Optional[str]:
-
-    if variance_pct is None:
-        return None
-    if variance_pct <= 0:
+    if variance_pct is None or variance_pct <= 0:
         return None
     if variance_pct <= 5:
         return "baja"
-    elif variance_pct <= 12:
+    if variance_pct <= 12:
         return "media"
-    else:
-        return "alta"
+    return "alta"
 
 def detectar_hallazgos(resultados: List[Dict]) -> List[Dict]:
-    hallazgos = []
+    hallazgos: List[Dict] = []
     contador = 1
     for r in resultados:
         severidad = clasificar_severidad(r["variance_vs_target_pct"])
         if severidad is not None:
-            hallazgo = {
+            hallazgos.append({
                 "id": f"F-{contador:03d}",
                 "type": "sobreconsumo_energetico",
                 "severity": severidad,
@@ -108,26 +104,23 @@ def detectar_hallazgos(resultados: List[Dict]) -> List[Dict]:
                 "kwh_per_unit": r["kwh_per_unit"],
                 "target_kwh_per_unit": r["target_kwh_per_unit"],
                 "variance_pct": r["variance_vs_target_pct"],
-            }
-            hallazgos.append(hallazgo)
+            })
             contador += 1
     return hallazgos
 
 def detectar_warnings(filas: List[Dict]) -> List[Dict]:
-    warnings_list = []
-
-    # energy_kwh faltante -> aviso individual
-    faltantes = [r for r in filas if r.get("energy_kwh") is None]
-    for r in faltantes:
-        warnings_list.append({
-            "code": "MISSING_ENERGY_DATA",
-            "message": (
-                f"energy_kwh faltante en {r['facility_id']} / {r['equipment_id']} "
-                f"periodo {r['period']}. No se calcula kwh/unit ni emisiones."
-            ),
-        })
-
-    raras = [r for r in filas if r.get("production_units") is None or r.get("production_units") <= 0]
+    warnings_list: List[Dict] = []
+    for r in filas:
+        if r.get("energy_kwh") is None:
+            warnings_list.append({
+                "code": "MISSING_ENERGY_DATA",
+                "message": (
+                    f"energy_kwh faltante en {r.get('facility_id','?')} / "
+                    f"{r.get('equipment_id','?')} periodo {r.get('period','?')}. "
+                    "No se calcula kwh/unit ni emisiones."
+                ),
+            })
+    raras = [r for r in filas if (r.get("production_units") is None or r.get("production_units") <= 0)]
     if len(raras) > 0:
         warnings_list.append({
             "code": "INVALID_PRODUCTION",
@@ -135,40 +128,36 @@ def detectar_warnings(filas: List[Dict]) -> List[Dict]:
         })
     return warnings_list
 
-def sumar_no_none(valores: List[Optional[float]]) -> float:
-    return sum(v for v in valores if v is not None)
+def _sumar_no_none(valores: List[Optional[float]]) -> Optional[float]:
+    validos = [v for v in valores if v is not None]
+    if len(validos) == 0:
+        return None
+    return sum(validos)
 
-def promedio_no_none(valores: List[Optional[float]]) -> Optional[float]:
+def _promedio_no_none(valores: List[Optional[float]]) -> Optional[float]:
     validos = [v for v in valores if v is not None]
     if len(validos) == 0:
         return None
     return sum(validos) / len(validos)
 
-def procesar_todo(path_csv: str, period: str = None, facility: str = None) -> Dict:
+def procesar_todo(
+    path_csv: str,
+    period: Optional[str] = None,
+    facility: Optional[str] = None,
+) -> Dict[str, Any]:
     filas = cargar_dataset(path_csv)
     filas_filtradas = filtrar_datos(filas, period=period, facility=facility)
 
-    # proceso cada fila
-    resultados_por_fila = []
-    for r in filas_filtradas:
-        resultados_por_fila.append(procesar_fila(r))
-
+    resultados_por_fila = [procesar_fila(r) for r in filas_filtradas]
     hallazgos = detectar_hallazgos(resultados_por_fila)
     warnings_data = detectar_warnings(filas_filtradas)
 
-    # metricas agregadas
-    total_energy = sumar_no_none([r.get("energy_kwh") for r in filas_filtradas])
-    total_production = sumar_no_none([r.get("production_units") for r in filas_filtradas])
-    total_emisiones = sumar_no_none([r["estimated_emissions_kg"] for r in resultados_por_fila])
-    promedio_intensidad = promedio_no_none([r["kwh_per_unit"] for r in resultados_por_fila])
-    desviacion_prom = promedio_no_none([r["variance_vs_target_pct"] for r in resultados_por_fila])
-
     metricas_agregadas = {
-        "total_energy_kwh": total_energy,
-        "total_production_units": total_production,
-        "total_estimated_emissions_kg": total_emisiones,
-        "avg_kwh_per_unit": promedio_intensidad,
-        "avg_variance_vs_target_pct": desviacion_prom,
+        "total_energy_kwh": _sumar_no_none([r.get("energy_kwh") for r in filas_filtradas]),
+        "total_production_units": _sumar_no_none([r.get("production_units") for r in filas_filtradas]),
+        "total_estimated_emissions_kg": _sumar_no_none([r["estimated_emissions_kg"] for r in resultados_por_fila]),
+        "avg_kwh_per_unit": _promedio_no_none([r["kwh_per_unit"] for r in resultados_por_fila]),
+        "avg_variance_vs_target_pct": _promedio_no_none([r["variance_vs_target_pct"] for r in resultados_por_fila]),
         "records_count": len(filas_filtradas),
     }
 

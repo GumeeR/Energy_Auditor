@@ -12,17 +12,19 @@ Pensado para correr en Linux. El Dockerfile usa imagen base `python:3.11-slim`.
 
 ## Estructura
 
-El codigo fuente esta en `app/` (API, schemas pydantic, config, store de jobs y los servicios de dominio bajo `app/services/`). Los datos viven en `data/`: el dataset CSV en `data/datasets/`, los markdown de contexto en `data/context/`, y los schemas, metadata y casos de prueba en la raiz de `data/`. Los tests estan en `tests/test_basico.py`. En `docs/` quedo la documentacion extra, un output de ejemplo y el README original del brief.
+El codigo fuente esta en `src/` (API, schemas pydantic, config, store de jobs y los servicios de dominio bajo `src/services/`). Los datos viven en `data/`: el dataset CSV en `data/dataset/`, los markdown de contexto en `data/context/`, y los schemas, metadata y casos de prueba en la raiz de `data/`. Los tests estan en `test/test.py`. En `docs/` quedo la documentacion extra y el README original del brief.
 
 ## Decisiones clave
 
-Todo calculo (kwh_per_unit, variance, emisiones, severidad) vive en `app/services/calculos.py`. El LLM solo recibe los numeros ya listos y los redacta — no hace matematica.
+Todo calculo (kwh_per_unit, variance, emisiones, severidad, agregados) vive en `src/services/calculos.py`. El LLM solo recibe los numeros ya listos y los redacta — no hace matematica.
 
-El "async" esta simulado con `BackgroundTasks` de FastAPI: se devuelve `job_id` al instante y el procesamiento corre en segundo plano.
+El "async" esta simulado con `BackgroundTasks` de FastAPI: `POST /jobs` responde `202` con el `job_id` al instante y el procesamiento corre en segundo plano.
 
-Para los archivos, `ruta_segura_dataset()` rechaza `..` y rutas absolutas (anti path traversal) y fuerza que todo se lea desde `data/datasets/`. Nada de secretos hardcodeados — `.env.example` documenta las variables y, si no hay API key, el sistema cae al LLM fake en vez de romperse.
+Seguridad de archivos: `security.ruta_segura()` rechaza rutas absolutas, `..`, null bytes y todo lo que escape de `data/dataset/`. Los inputs de texto (`business_prompt`, `period`, `facility_filter`) pasan por `security.sanitize_prompt` y whitelists regex. Hay middleware que corta request bodies por encima de 64 KiB. Nada de secretos hardcodeados — `.env.example` documenta las variables y, si no hay API key, el sistema cae al LLM fake en vez de romperse.
 
-Si falta `energy_kwh` en una fila se emite warning y esa fila se saltea; el status final del job queda en `"warning"`. Las excepciones del procesamiento se envuelven a nivel de job, asi que nunca sale un stack trace al cliente.
+La salida se valida dos veces: pydantic al serializar `JobResult` y `jsonschema` en runtime contra `data/output_schema.json`. Si la validacion falla, se agrega un warning `SCHEMA_VALIDATION_FAILED` y el status baja a `warning` — nunca se devuelve JSON fuera de contrato sin aviso.
+
+Si falta `energy_kwh` en una fila se emite warning y esa fila se saltea; el status final del job queda en `"warning"`. Las excepciones se capturan por clase (`ValueError`, `FileNotFoundError`, `Exception`) en el orchestrator, asi que al cliente solo le llega un codigo generico — stack trace solo a los logs.
 
 ## Instalacion
 
@@ -82,8 +84,19 @@ Devuelve el JSON completo conforme a `data/output_schema.json`.
 
 ```bash
 pytest test/test.py -v
-
 ```
+
+Cubren calculos deterministas, saneo/path traversal, contrato de salida (incluyendo validacion contra `output_schema.json`), builders de prompts y endpoints end-to-end.
+
+## Demo end-to-end
+
+Con el servicio arriba:
+
+```bash
+./scripts/run_e2e.sh
+```
+
+Corre los casos del brief (marzo/todas, PLT-01, periodo sin datos) y deja los JSON en `docs/outputs/`. Un output ya generado vive en `docs/example_output.json` para consulta rapida.
 
 ## Limites conocidos y supuestos
 
@@ -91,5 +104,6 @@ La cola de jobs vive en memoria (un dict). Si se reinicia el servicio se pierden
 
 ## Casos de prueba cubiertos
 
-- CASE-01: `GET` de jobs con `period=2025-03` detecta al menos un hallazgo de severidad alta (Bombeo PUMP-07 en marzo esta ~26% sobre target) y emite warning por `energy_kwh` faltante en Refrigeracion CH-11 febrero (solo si el filtro incluye feb o si no se filtra).
-- CASE-02: `POST` con `facility_filter="PLT-01"` devuelve solo hallazgos de esa planta.
+- CASE-01: `period=2025-03` detecta al menos un hallazgo de severidad alta (Bombeo PUMP-07 en marzo esta ~26% sobre target).
+- CASE-02: `facility_filter=PLT-01` devuelve solo hallazgos de esa planta, contrasta contra target intensity.
+- CASE-03: `period=2099-01` no matchea filas, devuelve status `error` con warning `NO_DATA_FOR_FILTER` — degradacion controlada.
