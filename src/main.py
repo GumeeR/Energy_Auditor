@@ -4,7 +4,7 @@ import logging
 from pathlib import Path
 from fastapi import FastAPI, BackgroundTasks, HTTPException
 from src import config
-from src.schemas import (
+from src.schema import (
     JobRequest, JobResult, StatusEnum, Summary, Metric,
     Finding, Evidence, Recommendation, Warning_, Trace, ConfidenceEnum
 )

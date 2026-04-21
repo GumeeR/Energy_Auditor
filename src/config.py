@@ -12,7 +12,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # datasets & contextos
 DATA_DIR = Path(os.getenv("DATA_DIR", BASE_DIR / "data"))
-DATASETS_DIR = DATA_DIR / "datasets"
+DATASETS_DIR = DATA_DIR / "dataset"
 CONTEXT_DIR = DATA_DIR / "context"
 
 # LLM

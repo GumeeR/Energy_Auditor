@@ -38,3 +38,37 @@ def test_procesar_todo_con_dataset_real():
     resultado = calculos.procesar_todo(str(csv_path), period="2025-03")
     assert resultado["metricas_agregadas"]["records_count"] == 4
     assert len(resultado["hallazgos"]) >= 1
+
+def test_job_result_se_puede_serializar():
+      from src.schema import JobResult, Summary, Metric, Trace, StatusEnum
+      jr = JobResult(
+          job_id="test-123", status=StatusEnum.success,
+          summary=Summary(period="2025-03", dataset_ref="dataset.csv"),
+          metrics=[Metric(name="total", value=100, unit="kWh")],
+          findings=[], recommendations_draft=[], warnings=[],
+          trace=Trace(prompt_version="v1", documents_used=["a.md"], rules_applied=["r1"]),
+      )
+      data = jr.model_dump()
+      assert data["job_id"] == "test-123"
+
+def test_ruta_segura_bloquea_traversal():
+    from src.main import ruta_segura_dataset
+    with pytest.raises(ValueError):
+        ruta_segura_dataset("../../../etc/passwd")
+    with pytest.raises(ValueError):
+        ruta_segura_dataset("/etc/passwd")
+
+def test_endpoint_root():
+    from fastapi.testclient import TestClient
+    from src.main import app
+    client = TestClient(app)
+    r = client.get("/")
+    assert r.status_code == 200
+    assert r.json()["status"] == "up"
+
+def test_endpoint_job_not_found():
+    from fastapi.testclient import TestClient
+    from src.main import app
+    client = TestClient(app)
+    r = client.get("/jobs/id-que-no-existe")
+    assert r.status_code == 404
