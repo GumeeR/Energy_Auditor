@@ -1,0 +1,12 @@
+{
+  "cases": [
+    {
+      "case_id": "CASE-01",
+      "description": "Review March 2025 across all facilities. Candidate should detect at least one intensity anomaly and one missing-data warning if relevant to period or prior completeness strategy."
+    },
+    {
+      "case_id": "CASE-02",
+      "description": "Review Plant 01 only. Candidate should compare against target intensity and generate structured draft recommendations."
+    }
+  ]
+}

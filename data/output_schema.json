@@ -1,0 +1,200 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "StructuredEnergyReview",
+  "type": "object",
+  "required": [
+    "job_id",
+    "status",
+    "summary",
+    "metrics",
+    "findings",
+    "recommendations_draft",
+    "warnings",
+    "trace"
+  ],
+  "properties": {
+    "job_id": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "success",
+        "warning",
+        "error"
+      ]
+    },
+    "summary": {
+      "type": "object",
+      "required": [
+        "period",
+        "dataset_ref"
+      ],
+      "properties": {
+        "period": {
+          "type": "string"
+        },
+        "dataset_ref": {
+          "type": "string"
+        }
+      }
+    },
+    "metrics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "value",
+          "unit",
+          "source"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "value": {
+            "type": [
+              "number",
+              "string"
+            ]
+          },
+          "unit": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "deterministic"
+            ]
+          }
+        }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "statement",
+          "evidence",
+          "confidence"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "statement": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "object",
+            "required": [
+              "dataset_fields",
+              "document_refs"
+            ],
+            "properties": {
+              "dataset_fields": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "document_refs": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "confidence": {
+            "type": "string",
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ]
+          }
+        }
+      }
+    },
+    "recommendations_draft": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "text",
+          "based_on_findings",
+          "disclaimer"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "based_on_findings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "disclaimer": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "trace": {
+      "type": "object",
+      "required": [
+        "prompt_version",
+        "documents_used",
+        "rules_applied"
+      ],
+      "properties": {
+        "prompt_version": {
+          "type": "string"
+        },
+        "documents_used": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "rules_applied": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

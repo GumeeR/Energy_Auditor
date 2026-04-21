@@ -1,0 +1,28 @@
+{
+  "dataset_id": "ENERGY-AUDIT-DEMO-001",
+  "description": "Synthetic industrial energy dataset for technical evaluation. Values are fictitious and for assessment only.",
+  "period_covered": [
+    "2025-01",
+    "2025-02",
+    "2025-03"
+  ],
+  "units": {
+    "energy_kwh": "kWh",
+    "production_units": "unit",
+    "co2_factor_kg_per_kwh": "kgCO2e/kWh",
+    "operating_hours": "hour",
+    "target_kwh_per_unit": "kWh/unit",
+    "baseline_energy_kwh": "kWh"
+  },
+  "expected_deterministic_metrics": [
+    "kwh_per_unit = energy_kwh / production_units",
+    "variance_vs_target_pct = ((kwh_per_unit - target_kwh_per_unit) / target_kwh_per_unit) * 100",
+    "estimated_emissions_kg = energy_kwh * co2_factor_kg_per_kwh"
+  ],
+  "data_quality_notes": [
+    "At least one record has missing energy_kwh to test graceful degradation.",
+    "At least one process has a period with anomalous energy intensity.",
+    "The LLM must not perform calculations; calculations must be deterministic in code."
+  ],
+  "business_prompt_example": "Generate structured findings and preliminary recommendations for the March 2025 energy review."
+}
